@@ -1,0 +1,55 @@
+{
+  "_note": "README.md に記録された研究者自身の実測値をそのまま転記したもの。元データ（fossil_collections.csv 等）はこのリポジトリに含まれないため、本サービスでは再計算していない。数値を変更するときは README.md と同時に更新すること。",
+  "coordinate_survey_4_1": {
+    "source": "README.md 4.1",
+    "n_collections": 4770,
+    "rows": [
+      {"label": "日本のコレクション", "value": 4770, "unit": "件"},
+      {"label": "異なる数値座標", "value": 2484, "unit": "地点"},
+      {"label": "2件以上のコレクションが同一座標にある地点", "value": 498, "unit": "地点"},
+      {"label": "同一座標に、互いに重ならない年代区間の組がある地点", "value": 122, "unit": "地点"},
+      {"label": "そのうち、3個以上の互いに非重複な年代区間を選べる地点", "value": 26, "unit": "地点"},
+      {"label": "非重複区間数の最大", "value": 5, "unit": "区間"}
+    ]
+  },
+  "rounding_widths_4_2": {
+    "source": "README.md 4.2",
+    "metric": "同一数値座標に、互いに重ならない年代区間を持つ記録がある地点の数",
+    "rows": [
+      {"label": "元座標", "arcsec": 0, "value": 122},
+      {"label": "1秒角丸め", "arcsec": 1, "value": 122},
+      {"label": "6秒角丸め", "arcsec": 6, "value": 127},
+      {"label": "1分角丸め", "arcsec": 60, "value": 170},
+      {"label": "5分角丸め", "arcsec": 300, "value": 260},
+      {"label": "15分角丸め", "arcsec": 900, "value": 247}
+    ]
+  },
+  "arcmin1_pairs_4_2": {
+    "source": "README.md 4.2",
+    "rows": [
+      {"label": "以前は異なる座標だった記録同士が、新たに同一座標になったペア", "value": 15464, "unit": "ペア"},
+      {"label": "そのうち年代区間が重ならないペア", "value": 3848, "unit": "ペア"},
+      {"label": "新たな非重複年代ペアを含む丸め後のセル", "value": 80, "unit": "セル"}
+    ]
+  },
+  "coordinate_regularity_4_3": {
+    "source": "README.md 4.3",
+    "adjusted_odds_ratio_approx": 2.89,
+    "note": "探索的分析。関連を示す結果であり、因果関係の証明ではない。"
+  },
+  "macrostrat_join_check_4_4": {
+    "source": "README.md 4.4",
+    "rows": [
+      {"label": "試行的な照合点検の対象（日本）", "value": 4766, "unit": "件"},
+      {"label": "対応付け情報（join_id）がある記録", "value": 4583, "unit": "件"},
+      {"label": "割り当てられたポリゴンに元座標が含まれない記録", "value": 2682, "unit": "件"}
+    ],
+    "note": "年代条件や探索処理を含む対応付けと、単純な座標包含判定との違いを示す数値であり、2,682件の誤登録を証明しない。"
+  },
+  "macrostrat_jp_us_4_5": {
+    "source": "README.md 4.5",
+    "JP": {"n_collections": 4766, "both_matched": 3862, "poly_changed": 15, "poly_change_pct": 0.39, "age_endpoint_changed": 15, "orig_unmatched": 858, "lost": 46, "gained": 24},
+    "US": {"n_collections": 54912, "both_matched": 52759, "poly_changed": 1965, "poly_change_pct": 3.72, "age_endpoint_changed": 1722, "orig_unmatched": 1946, "lost": 207, "gained": 187},
+    "jp_changed_unique_original_coords": 11
+  }
+}
