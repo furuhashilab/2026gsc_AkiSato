@@ -1,0 +1,1 @@
+# 2026gsc_AkiSato
