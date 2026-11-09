@@ -1,0 +1,5 @@
+# web data build + GSJ API fetch
+pandas>=2.2
+numpy>=1.26
+pyproj>=3.6
+requests>=2.31

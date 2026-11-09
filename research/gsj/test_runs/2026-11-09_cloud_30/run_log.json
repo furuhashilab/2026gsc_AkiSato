@@ -1,0 +1,28 @@
+{
+  "started": "2026-11-09T20:50:45+00:00",
+  "endpoint": "https://gbank.gsj.jp/seamless/v2/api/1.3.1/legend.json",
+  "point_order": "latlon",
+  "collections": 30,
+  "unique_coordinates": 54,
+  "cached_before": 0,
+  "requests": 3,
+  "errors": [
+    {
+      "point": "26.7000000000,127.9500000000",
+      "status": "request_error",
+      "detail": "ProxyError: HTTPSConnectionPool(host='gbank.gsj.jp', port=443): Max retries exceeded with url: /seamless/v2/api/1.3.1/legend.json?point=26.7000000000%2C127.9500000000 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))"
+    },
+    {
+      "point": "26.7000010000,127.9499970000",
+      "status": "request_error",
+      "detail": "ProxyError: HTTPSConnectionPool(host='gbank.gsj.jp', port=443): Max retries exceeded with url: /seamless/v2/api/1.3.1/legend.json?point=26.7000010000%2C127.9499970000 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))"
+    },
+    {
+      "point": "33.9833333333,131.2666666667",
+      "status": "request_error",
+      "detail": "ProxyError: HTTPSConnectionPool(host='gbank.gsj.jp', port=443): Max retries exceeded with url: /seamless/v2/api/1.3.1/legend.json?point=33.9833333333%2C131.2666666667 (Caused by ProxyError('Unable to connect to proxy', OSError('Tunnel connection failed: 403 Forbidden')))"
+    }
+  ],
+  "stopped_early": true,
+  "finished": "2026-11-09T20:51:31+00:00"
+}

@@ -1,0 +1,7 @@
+Claude Code: this is a small research-results bundle. 
+Open README.md first, then results/summary_macrostrat.json and results/out_JP_arcmin1.0.csv.
+Use US result CSV for the country comparison.
+The huge original Macrostrat map_data.geojson and full fossil_collections.csv are NOT included.
+Build the static GitHub Pages UI using the supplied results first.
+Do not claim to have rerun the geospatial point-in-polygon computation from raw polygons.
+Use scripts/gsj_quantization_pilot.py as a draft until endpoint response is verified in your environment.
