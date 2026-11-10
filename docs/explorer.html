@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>15件の地点比較 | Fossil Overlay Audit</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{--ink:#1c2932;--muted:#536473;--line:#cbd4dc;--bg:#f4f7f8;--blue:#1674b2;--red:#c04836}
+*{box-sizing:border-box}
+body{font:15px/1.65 system-ui,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink);margin:0}
+header{background:#142b3b;color:white;padding:14px max(16px,calc((100vw - 1150px)/2))}
+header a{color:#c5eaff} h1{font-size:clamp(20px,3vw,30px);margin:8px 0}
+main{max-width:1150px;margin:auto;padding:16px}
+.note{background:#fff8e9;border-left:4px solid #c5891d;padding:10px 14px;margin-bottom:15px}
+.layout{display:grid;grid-template-columns:minmax(285px,340px) minmax(0,1fr);gap:14px;align-items:start}
+aside,.mapbox,.detail{background:white;border:1px solid var(--line);border-radius:10px;padding:13px}
+label{display:block;font-weight:700}
+input{width:100%;border:1px solid #9bb0bc;border-radius:6px;padding:9px;font:inherit;margin:6px 0}
+#items{height:460px;overflow:auto;display:grid;gap:6px;align-content:start}
+.item{border:1px solid var(--line);background:#fafcfc;text-align:left;padding:9px;border-radius:6px;font:inherit;cursor:pointer}
+.item[aria-pressed=true]{border:2px solid var(--blue);background:#e9f4fa}
+.item strong{font-size:15px}.small{color:var(--muted);font-size:12px}
+#map{height:440px;background:#e1e8eb;border-radius:7px;margin-bottom:10px}
+.map-fallback{height:440px;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px}
+.legend{font-size:13px;color:var(--muted)}
+.dot{display:inline-block;border-radius:50%;width:10px;height:10px;margin-right:5px}
+.red{background:var(--red)}.blue{background:var(--blue)}
+#detail{margin-top:10px;overflow-wrap:anywhere}
+#detail table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid var(--line);padding:7px;text-align:left;vertical-align:top}
+th{width:35%} a{color:#075e9a}code{font-family:monospace}footer{margin:26px 0;font-size:13px;color:var(--muted)}
+@media(max-width:730px){.layout{display:flex;flex-direction:column-reverse}.layout>aside,.layout>.right{width:100%}#items{height:230px}#map{height:360px}}
+</style></head>
+<body>
+<header><a href="./">← 研究概要・日米比較へ戻る</a><h1>日本で判定が変わった15件を調べる</h1>
+<div>元の座標と1分角に丸めた座標の位置、Macrostratの地質分類を比べます。</div></header>
+<main>
+<div class="note"><b>実測済み：Macrostrat（2022年データ）</b>。15件は11種類の元座標から来ています。これは地質記録の誤り15件という意味ではありません。<b>GSJ・境界距離は未解析</b>です。地図の背景は現在のOpenStreetMapで、Macrostratの地質ポリゴンを描いたものではありません。</div>
+<div class="layout">
+<aside><label for="query">PBDBコレクション番号で検索</label>
+<input id="query" type="search" placeholder="例：101735 / 12965" autocomplete="off">
+<div id="count" class="small"></div>
+<div id="items"></div>
+</aside>
+<section class="right">
+<div class="mapbox"><div id="map"><div class="map-fallback">地図を読み込んでいます…</div></div>
+<div class="legend"><span class="dot red"></span>元座標　 <span class="dot blue"></span>1分角丸め後　 ━ 2点の移動</div></div>
+<div class="detail" id="detail" aria-live="polite">左側からコレクションを選択してください。</div>
+</section>
+</div>
+<footer>データ：Ye &amp; Peters (2023), Dryad DOI 10.5061/dryad.vhhmgqnxt 由来の化石記録とMacrostrat地質ポリゴンを用いた本研究の集計。背景地図 © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>。地図上の二点は、元座標が正しい採集地点であることを保証するものではありません。</footer>
+</main>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const points=[{"collection_no":101735,"lon":132.679993,"lat":33.380001,"rlon":132.683333,"rlat":33.383333,"fossil_early":251.3,"fossil_late":247.2,"name_o":"Mesozoic sedimentary rocks","name_r":"Paleozoic sedimentary rocks","lith_o":"sedimentary","lith_r":"sedimentary","age_b_o":145.0,"age_t_o":66.0,"age_b_r":443.8,"age_t_r":358.9,"fit_o":false,"fit_r":false},{"collection_no":127345,"lon":142.024994,"lat":43.275002,"rlon":142.016667,"rlat":43.283333,"fossil_early":93.5,"fossil_late":89.3,"name_o":"Mesozoic sedimentary rocks","name_r":"Cenozoic sedimentary rocks","lith_o":"sedimentary","lith_r":"sedimentary","age_b_o":145.0,"age_t_o":66.0,"age_b_r":66.0,"age_t_r":0.0,"fit_o":true,"fit_r":false},{"collection_no":129652,"lon":138.490005,"lat":36.157001,"rlon":138.483333,"rlat":36.15,"fossil_early":265.1,"fossil_late":259.9,"name_o":"Cenozoic volcanic rocks","name_r":"Paleozoic-Mesozoic sedimentary rocks","lith_o":"igneous","lith_r":"sedimentary","age_b_o":66.0,"age_t_o":0.0,"age_b_r":358.9,"age_t_r":66.0,"fit_o":false,"fit_r":true},{"collection_no":129653,"lon":138.490005,"lat":36.157001,"rlon":138.483333,"rlat":36.15,"fossil_early":265.1,"fossil_late":259.9,"name_o":"Cenozoic volcanic rocks","name_r":"Paleozoic-Mesozoic sedimentary rocks","lith_o":"igneous","lith_r":"sedimentary","age_b_o":66.0,"age_t_o":0.0,"age_b_r":358.9,"age_t_r":66.0,"fit_o":false,"fit_r":true},{"collection_no":129654,"lon":138.490005,"lat":36.157001,"rlon":138.483333,"rlat":36.15,"fossil_early":265.1,"fossil_late":259.9,"name_o":"Cenozoic volcanic rocks","name_r":"Paleozoic-Mesozoic sedimentary rocks","lith_o":"igneous","lith_r":"sedimentary","age_b_o":66.0,"age_t_o":0.0,"age_b_r":358.9,"age_t_r":66.0,"fit_o":false,"fit_r":true},{"collection_no":129655,"lon":138.490005,"lat":36.157001,"rlon":138.483333,"rlat":36.15,"fossil_early":265.1,"fossil_late":259.9,"name_o":"Cenozoic volcanic rocks","name_r":"Paleozoic-Mesozoic sedimentary rocks","lith_o":"igneous","lith_r":"sedimentary","age_b_o":66.0,"age_t_o":0.0,"age_b_r":358.9,"age_t_r":66.0,"fit_o":false,"fit_r":true},{"collection_no":129656,"lon":138.490005,"lat":36.157001,"rlon":138.483333,"rlat":36.15,"fossil_early":265.1,"fossil_late":259.9,"name_o":"Cenozoic volcanic rocks","name_r":"Paleozoic-Mesozoic sedimentary rocks","lith_o":"igneous","lith_r":"sedimentary","age_b_o":66.0,"age_t_o":0.0,"age_b_r":358.9,"age_t_r":66.0,"fit_o":false,"fit_r":true},{"collection_no":142029,"lon":136.570007,"lat":35.412498,"rlon":136.566667,"rlat":35.416667,"fossil_early":265.1,"fossil_late":259.9,"name_o":"Mesozoic-Cenozoic volcanic and intrusive rocks","name_r":"Paleozoic-Mesozoic sedimentary and volcanic rocks","lith_o":"igneous","lith_r":"igneous,sedimentary","age_b_o":145.0,"age_t_o":23.03,"age_b_r":358.9,"age_t_r":66.0,"fit_o":false,"fit_r":true},{"collection_no":165294,"lon":130.973007,"lat":32.444,"rlon":130.966667,"rlat":32.45,"fossil_early":221.5,"fossil_late":215.56,"name_o":"Mesozoic sedimentary rocks","name_r":"Paleozoic sedimentary rocks","lith_o":"sedimentary","lith_r":"sedimentary","age_b_o":145.0,"age_t_o":66.0,"age_b_r":443.8,"age_t_r":358.9,"fit_o":false,"fit_r":false},{"collection_no":165702,"lon":143.100006,"lat":42.544998,"rlon":143.1,"rlat":42.55,"fossil_early":0.126,"fossil_late":0.0117,"name_o":"Paleozoic-Mesozoic crystalline metamorphic rocks","name_r":"Cenozoic sedimentary rocks","lith_o":"metamorphic","lith_r":"sedimentary","age_b_o":358.9,"age_t_o":66.0,"age_b_r":23.03,"age_t_r":0.0,"fit_o":false,"fit_r":true},{"collection_no":180395,"lon":140.848618,"lat":37.108334,"rlon":140.85,"rlat":37.116667,"fossil_early":38.0,"fossil_late":33.9,"name_o":"Paleozoic sedimentary rocks","name_r":"Mesozoic intrusive rocks","lith_o":"sedimentary","lith_r":"igneous","age_b_o":541.0,"age_t_o":358.9,"age_b_r":251.902,"age_t_r":66.0,"fit_o":false,"fit_r":false},{"collection_no":181921,"lon":142.796295,"lat":42.178699,"rlon":142.8,"rlat":42.183333,"fossil_early":83.5,"fossil_late":70.6,"name_o":"Mesozoic sedimentary rocks","name_r":"Paleozoic-Mesozoic crystalline metamorphic rocks","lith_o":"sedimentary","lith_r":"metamorphic","age_b_o":145.0,"age_t_o":66.0,"age_b_r":358.9,"age_t_r":66.0,"fit_o":true,"fit_r":true},{"collection_no":181925,"lon":142.800598,"lat":42.175201,"rlon":142.8,"rlat":42.183333,"fossil_early":83.5,"fossil_late":70.6,"name_o":"Mesozoic sedimentary rocks","name_r":"Paleozoic-Mesozoic crystalline metamorphic rocks","lith_o":"sedimentary","lith_r":"metamorphic","age_b_o":145.0,"age_t_o":66.0,"age_b_r":358.9,"age_t_r":66.0,"fit_o":true,"fit_r":true},{"collection_no":207639,"lon":130.749069,"lat":32.62978,"rlon":130.75,"rlat":32.633333,"fossil_early":23.03,"fossil_late":5.333,"name_o":"Paleozoic sedimentary rocks","name_r":"Cenozoic sedimentary and volcanic rocks","lith_o":"sedimentary","lith_r":"igneous,sedimentary","age_b_o":443.8,"age_t_o":358.9,"age_b_r":66.0,"age_t_r":0.0,"fit_o":false,"fit_r":true},{"collection_no":211553,"lon":142.458893,"lat":43.843334,"rlon":142.466667,"rlat":43.85,"fossil_early":237.0,"fossil_late":228.0,"name_o":"Mesozoic sedimentary rocks","name_r":"Cenozoic sedimentary rocks","lith_o":"sedimentary","lith_r":"sedimentary","age_b_o":145.0,"age_t_o":66.0,"age_b_r":23.03,"age_t_r":0.0,"fit_o":false,"fit_r":false}];
+const $=id=>document.getElementById(id);
+let map=null,orig=null,rounded=null,connector=null;
+if(typeof L!=='undefined'){
+ map=L.map('map',{scrollWheelZoom:false}).setView([36.7,138],5);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+   attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
+   maxZoom:18
+ }).addTo(map);
+}else{
+ $('map').innerHTML='<div class="map-fallback">背景地図を読み込めません。地点一覧と下の座標・地質データは利用できます。<br>各地点のOpenStreetMapリンクから位置を確認できます。</div>';
+}
+const esc=s=>String(s??'記録なし').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>typeof n==='number'?n.toFixed(6):esc(n);
+function select(record){
+ document.querySelectorAll('.item').forEach(el=>el.setAttribute('aria-pressed',String(+el.dataset.id===record.collection_no)));
+ const url=`https://www.openstreetmap.org/?mlat=${record.lat}&mlon=${record.lon}#map=14/${record.lat}/${record.lon}`;
+ $('detail').innerHTML=`<h2>PBDB コレクション ${esc(record.collection_no)}</h2>
+ <p><a target="_blank" rel="noopener" href="${url}">OpenStreetMapで元座標を見る</a>　<a target="_blank" rel="noopener" href="https://paleobiodb.org/classic/displayCollResults?collection_no=${record.collection_no}">PBDBで番号を照会</a></p>
+ <table><tbody>
+ <tr><th></th><th>元座標</th><th>1分角丸め</th></tr>
+ <tr><th>緯度・経度</th><td>${fmt(record.lat)}, ${fmt(record.lon)}</td><td>${fmt(record.rlat)}, ${fmt(record.rlon)}</td></tr>
+ <tr><th>Macrostrat地質区分</th><td>${esc(record.name_o)}</td><td>${esc(record.name_r)}</td></tr>
+ <tr><th>ポリゴンの年代幅（Ma）</th><td>${esc(record.age_b_o)} ～ ${esc(record.age_t_o)}</td><td>${esc(record.age_b_r)} ～ ${esc(record.age_t_r)}</td></tr>
+ <tr><th>化石記録の年代幅（Ma）</th><td colspan="2">${esc(record.fossil_early)} ～ ${esc(record.fossil_late)}</td></tr>
+ </tbody></table>
+ <p class="small">ポリゴンの年代は地質図の値です。化石の実際の採集層準や誤登録の有無を示すものではありません。</p>`;
+ if(map){
+  if(orig)map.removeLayer(orig);if(rounded)map.removeLayer(rounded);if(connector)map.removeLayer(connector);
+  orig=L.circleMarker([record.lat,record.lon],{radius:9,color:'#c04836',weight:3,fillOpacity:.8}).addTo(map).bindPopup('元座標');
+  rounded=L.circleMarker([record.rlat,record.rlon],{radius:8,color:'#1674b2',weight:3,fillOpacity:.8}).addTo(map).bindPopup('丸め後');
+  connector=L.polyline([[record.lat,record.lon],[record.rlat,record.rlon]],{color:'#1c2932',weight:3,dashArray:'4,6'}).addTo(map);
+  map.fitBounds(L.latLngBounds([[record.lat,record.lon],[record.rlat,record.rlon]]).pad(.8),{maxZoom:14});
+ }
+}
+function render(){
+ const q=$('query').value.trim();
+ const results=points.filter(d=>String(d.collection_no).includes(q));
+ $('count').textContent=`表示中 ${results.length} 件 / 全 ${points.length} 件（元座標11地点）`;
+ const list=$('items');list.replaceChildren();
+ for(const d of results){
+  const b=document.createElement('button');b.type='button';b.className='item';b.dataset.id=d.collection_no;b.setAttribute('aria-pressed','false');
+  const title=document.createElement('strong');title.textContent=`#${d.collection_no}`;
+  const meta=document.createElement('div');meta.className='small';meta.textContent=`${d.lat.toFixed(4)}, ${d.lon.toFixed(4)} ｜ ${d.name_o} → ${d.name_r}`;
+  b.append(title,meta);b.addEventListener('click',()=>select(d));list.append(b);
+ }
+ if(results.length) select(results[0]);
+ else $('detail').textContent='該当するコレクションはありません。';
+}
+$('query').addEventListener('input',render);render();
+</script>
+</body></html>

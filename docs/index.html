@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>化石産出座標の空間感度監査 — Macrostrat 日米比較</title>
+<meta name="description" content="PBDB化石コレクションを地質図へ照合する際の、1分角の座標量子化に対する感度を日本と米国本土で比較した再現性監査。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+JP:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --paper:#edf0f2; --panel:#f7f9fa; --ink:#16202a; --muted:#5a6872;
+  --rule:#c3ccd2; --hair:#dbe2e6;
+  --orig:#1f5673; --round:#a8780c; --fossil:#2c3a44; --pend:#8a949b;
+  --gain:#2f6b4f; --loss:#8d3a2e;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#11171c; --panel:#171f26; --ink:#e2e8ec; --muted:#93a1ab;
+    --rule:#2b3942; --hair:#222c34;
+    --orig:#64a8ca; --round:#dcb14e; --fossil:#b9c6ce; --pend:#6c7a84;
+    --gain:#6fb48e; --loss:#d08575;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#11171c; --panel:#171f26; --ink:#e2e8ec; --muted:#93a1ab;
+  --rule:#2b3942; --hair:#222c34;
+  --orig:#64a8ca; --round:#dcb14e; --fossil:#b9c6ce; --pend:#6c7a84;
+  --gain:#6fb48e; --loss:#d08575;
+}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{-webkit-text-size-adjust:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans JP","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  font-size:16px; line-height:1.75; font-feature-settings:"palt";
+}
+.num,.coord,.granval,td.fit,.tnum{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums}
+.wrap{max-width:62rem;margin:0 auto;padding:0 1.5rem}
+a{color:var(--orig)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--orig);outline-offset:2px}
+
+header.mast{border-bottom:2px solid var(--ink);padding:3.5rem 0 1.5rem}
+h1{font-size:clamp(1.6rem,4.2vw,2.4rem);line-height:1.3;font-weight:600;margin:0 0 .6rem;letter-spacing:-.01em;max-width:30ch}
+.scope{margin:0 0 1.6rem;max-width:56ch;color:var(--muted)}
+.prov{font-size:.8rem;color:var(--muted);line-height:2;border-top:1px solid var(--hair);padding-top:.9rem}
+.prov b{font-weight:500;color:var(--ink)}
+
+h2{font-size:1.15rem;font-weight:600;margin:3.5rem 0 .4rem;padding-bottom:.4rem;border-bottom:1px solid var(--rule)}
+h2 .n{color:var(--muted);font-weight:400;margin-right:.6rem}
+.lede{margin:.9rem 0 1.6rem;max-width:62ch}
+p{max-width:62ch}
+
+/* 検証台帳 */
+.ledger{list-style:none;margin:1.5rem 0 0;padding:0;border-top:1px solid var(--hair)}
+.ledger li{display:grid;grid-template-columns:5.5rem 1fr;gap:1rem;padding:.85rem 0;border-bottom:1px solid var(--hair);align-items:baseline}
+.mark{font-size:.72rem;letter-spacing:.04em;padding:.1rem .45rem;border:1px solid currentColor;border-radius:2px;text-align:center}
+.mark.ok{color:var(--gain)}
+.mark.pend{color:var(--pend);background:repeating-linear-gradient(135deg,transparent,transparent 3px,color-mix(in srgb,var(--pend) 16%,transparent) 3px,color-mix(in srgb,var(--pend) 16%,transparent) 6px)}
+.mark.no{color:var(--loss)}
+.ledger .what{margin:0}
+.ledger .why{display:block;color:var(--muted);font-size:.86rem;line-height:1.6}
+
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{text-align:left;font-weight:500;color:var(--muted);font-size:.8rem;border-bottom:1px solid var(--rule);padding:.5rem .7rem .5rem 0;vertical-align:bottom}
+td{padding:.6rem .7rem .6rem 0;border-bottom:1px solid var(--hair);vertical-align:top}
+td.num,th.num{text-align:right;padding-right:0}
+.sub{color:var(--muted);font-size:.82em}
+.arrow::before{content:"→ ";color:var(--round)}
+.scroll{overflow-x:auto;margin:1.5rem 0 0}
+.scroll table{min-width:46rem}
+
+/* 二地域の照合台帳 */
+.cmp td.v{text-align:right;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cmp tr.key td{font-weight:600;border-bottom-width:2px;border-bottom-color:var(--rule)}
+.ci{display:block;font-size:.76rem;color:var(--muted);font-weight:400}
+
+/* 粒度 */
+.granrow{display:grid;grid-template-columns:5rem 1fr auto;gap:1rem;align-items:center;padding:.55rem 0}
+.granbar{height:14px;background:var(--hair)}
+.granbar span{display:block;height:100%;background:var(--orig)}
+.granval{font-size:.85rem;white-space:nowrap}
+
+/* 深部時間トラック */
+.track{width:100%;height:auto;display:block}
+.axisrow{margin-bottom:-.3rem}
+.trackcell{min-width:17rem;padding-right:0}
+.grid{stroke:var(--hair);stroke-width:1}
+.axis{fill:var(--muted);font-size:7px;font-family:"IBM Plex Mono",monospace}
+.b-fossil{fill:var(--fossil)}
+.b-orig{fill:var(--orig)}
+.b-round{fill:var(--round)}
+.key{display:flex;flex-wrap:wrap;gap:1.2rem;font-size:.82rem;color:var(--muted);margin:1.2rem 0 0}
+.key i{display:inline-block;width:1.4rem;height:.5rem;margin-right:.4rem;vertical-align:.08em}
+td.fit{font-size:.8rem;white-space:nowrap}
+td.fit.gain{color:var(--gain)}
+td.fit.loss{color:var(--loss)}
+
+.note{background:var(--panel);border-left:3px solid var(--rule);padding:1rem 1.2rem;margin:1.6rem 0;font-size:.9rem}
+.note p{margin:.4rem 0;max-width:60ch}
+.note p:first-child{margin-top:0}
+.note p:last-child{margin-bottom:0}
+.pending{border-left-color:var(--pend);background:repeating-linear-gradient(135deg,var(--panel),var(--panel) 7px,color-mix(in srgb,var(--pend) 7%,var(--panel)) 7px,color-mix(in srgb,var(--pend) 7%,var(--panel)) 14px)}
+
+footer{margin-top:4rem;border-top:2px solid var(--ink);padding:1.5rem 0 4rem;font-size:.82rem;color:var(--muted)}
+footer p{max-width:70ch;margin:.5rem 0}
+
+@media (max-width:640px){
+  body{font-size:15px}
+  .ledger li{grid-template-columns:1fr;gap:.3rem}
+  .granrow{grid-template-columns:4rem 1fr;row-gap:.2rem}
+  .granval{grid-column:1/-1;text-align:right}
+}
+</style>
+</head>
+<body>
+
+<header class="mast">
+  <div class="wrap">
+    <h1>化石産出座標の空間感度監査</h1>
+    <p class="scope">同じ化石コレクションを、座標を1分角に丸めた前後で地質図に照合し、地質単元の判定がどれだけ変わるかを日本と米国本土で比較した記録。新発見の報告ではなく、公開データの再現性と空間感度の点検である。</p>
+    <div class="prov">
+      <b>化石データ</b> Paleobiology Database（Ye &amp; Peters 2023 の Dryad 補遺 doi:10.5061/dryad.vhhmgqnxt、2022年11月版）<br>
+      <b>地質図</b> 同補遺に含まれる Macrostrat「small」スケール地質図（2022年7月時点のスナップショット）<br>
+      <b>照合</b> GeoPandas による点内判定（within）／<b>ビルド</b> 2026-11-10<br>
+      <b>GSJシームレス地質図V2</b> 未検証 — APIへの実通信に失敗（第6節）
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+<p style="margin:18px 0;padding:14px;border:1px solid var(--rule);background:var(--panel)"><a href="explorer.html"><strong>日本で地質分類が変わった15件を地図で調べる →</strong></a><br>元座標と1分角丸め後の点を地図で比較し、PBDBコレクション番号で検索できます。GSJの未取得結果は表示しません。</p>
+
+<h2><span class="n">1</span>検証の状態</h2>
+<p class="lede">この監査で確定している事項と、まだ実行していない事項を分けて記録する。未実行の工程に推定値は置かない。</p>
+<ul class="ledger">
+  <li><span class="mark ok">確定</span><p class="what">Macrostrat 2022年スナップショットにおける日米の量子化感度の比較<span class="why">per-collection CSV から分子・分母とも再集計可能。本ページの数値はすべてそこから導出している。</span></p></li>
+  <li><span class="mark ok">確定</span><p class="what">日本で判定が変化した15件の個別内訳<span class="why">15件は11地点に由来する。1地点に5件が集中しているため、独立事象として15と数えてはならない。</span></p></li>
+  <li><span class="mark no">未検証</span><p class="what">GSJ 20万分の1シームレス地質図V2 への照合<span class="why">入力データと取得コードは整備済み、オフライン検算テストも通過。ただしAPIへの実通信に失敗しているため、GSJの数値は一切保持していない。第6節を参照。</span></p></li>
+  <li><span class="mark pend">未実行</span><p class="what">地質境界までの距離の算出<span class="why">ポリゴン境界形状を用いた計算。計算負荷の都合により実行待ち。</span></p></li>
+  <li><span class="mark no">不採用</span><p class="what">「日本では年代判定のずれがより深刻」という主張<span class="why">観測数が11地点にとどまり、支持できない。仮説として保留する。</span></p></li>
+</ul>
+
+<h2><span class="n">2</span>日本と米国本土の比較</h2>
+<p class="lede">各コレクションの座標を1分角（緯度で約1.85 km）の格子に丸め、丸める前後で同じ地質ポリゴンに入るかを調べた。比率の分母は、元座標と丸め後座標の<strong>両方</strong>がポリゴンに入った件数である。</p>
+<div class="scroll">
+<table class="cmp">
+<thead><tr><th>項目</th><th class="v" style="text-align:right">日本</th><th class="v" style="text-align:right">米国本土</th></tr></thead>
+<tbody>
+  <tr><td>抽出範囲内のコレクション</td><td class="v">4,766</td><td class="v">54,912</td></tr>
+  <tr><td>元座標でポリゴンに入らなかった件数</td><td class="v">858<span class="ci">18.0%</span></td><td class="v">1,946<span class="ci">3.5%</span></td></tr>
+  <tr><td>両方がポリゴンに入った件数（分母）</td><td class="v">3,862</td><td class="v">52,759</td></tr>
+  <tr class="key"><td>地質ポリゴンが変わった件数</td><td class="v">15 / 3,862 = 0.39%<span class="ci">95%信頼区間 0.24–0.64%</span></td><td class="v">1,965 / 52,759 = 3.72%<span class="ci">95%信頼区間 3.57–3.89%</span></td></tr>
+  <tr><td>年代区間の端点が変わった件数</td><td class="v">15<span class="ci">0.39%</span></td><td class="v">1,722<span class="ci">3.26%</span></td></tr>
+  <tr><td>変化した件のユニーク地点数</td><td class="v">11</td><td class="v">未集計</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note">
+  <p>日本の変化率が低いことは、日本の地質が座標のずれに強いことを意味しない。下の粒度を見ると、この地質図では日本の判定がそもそも粗いことがわかる。どちらの解釈が正しいかは、この比較だけでは決まらない。</p>
+</div>
+
+<h2><span class="n">3</span>照合に使った地質図の粒度</h2>
+<p class="lede">同一ファイル内で、抽出範囲に含まれるポリゴンの面積中央値を比べた。</p>
+<div class="granrow">
+  <div class="granlabel">日本</div>
+  <div class="granbar"><span style="width:100%"></span></div>
+  <div class="granval">2,863 km²<span class="sub"> / 190 ポリゴン</span></div>
+</div>
+<div class="granrow">
+  <div class="granlabel">米国本土</div>
+  <div class="granbar"><span style="width:4.784652742599339%"></span></div>
+  <div class="granval">137 km²<span class="sub"> / 10,233 ポリゴン</span></div>
+</div>
+<p class="lede" style="margin-top:1.4rem">比は約 20.9 倍。Macrostrat 自身の資料には、より大きな地図縮尺において東アジア（日本を含む）で地理的な空白が大きいと記載がある。本測定はその記述と整合する。ただし、これは本抽出データの面積中央値の比較であり、日本の地質図一般についての評価ではない。</p>
+
+<h2><span class="n">4</span>日本で判定が変わった15件</h2>
+<p class="lede">各行の帯は深部時間の範囲を表す。上段が化石の推定年代、中段が元座標のポリゴン年代、下段が丸め後のポリゴン年代。帯が縦にそろっていなければ、化石の年代と地質図の年代が食い違っている。</p>
+<div class="scroll">
+<table>
+<thead><tr>
+  <th class="num">記録番号</th><th>座標（緯度, 経度）</th><th>地質単元</th>
+  <th style="min-width:17rem">年代範囲（Ma、左が古い）<svg class="track axisrow" viewBox="0 0 460 16" aria-hidden="true"><line class="grid" x1="454.0" y1="10" x2="454.0" y2="14"/><text class="axis" x="454.0" y="8" text-anchor="middle">0</text><line class="grid" x1="356.6" y1="10" x2="356.6" y2="14"/><text class="axis" x="356.6" y="8" text-anchor="middle">100</text><line class="grid" x1="259.2" y1="10" x2="259.2" y2="14"/><text class="axis" x="259.2" y="8" text-anchor="middle">200</text><line class="grid" x1="161.8" y1="10" x2="161.8" y2="14"/><text class="axis" x="161.8" y="8" text-anchor="middle">300</text><line class="grid" x1="64.4" y1="10" x2="64.4" y2="14"/><text class="axis" x="64.4" y="8" text-anchor="middle">400</text></svg></th>
+  <th class="num">年代差<br><span class="sub">Ma</span></th><th>化石年代の収まり</th>
+</tr></thead>
+<tbody>
+<tr>
+  <td class="num">101735</td>
+  <td class="coord">33.3800, 132.6800<br><span class="sub">→ 33.3833, 132.6833</span></td>
+  <td class="unit">Mesozoic sedimentary rocks<br><span class="sub arrow">Paleozoic sedimentary rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="209.3" y="2" width="4.0" height="6" rx="1"/><rect class="b-orig" x="312.8" y="12" width="76.9" height="6" rx="1"/><rect class="b-round" x="21.8" y="22" width="82.7" height="6" rx="1"/></svg></td>
+  <td class="num">298.8</td>
+  <td class="fit ">外れ → 外れ</td>
+</tr>
+<tr>
+  <td class="num">127345</td>
+  <td class="coord">43.2750, 142.0250<br><span class="sub">→ 43.2833, 142.0167</span></td>
+  <td class="unit">Mesozoic sedimentary rocks<br><span class="sub arrow">Cenozoic sedimentary rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="362.9" y="2" width="4.1" height="6" rx="1"/><rect class="b-orig" x="312.8" y="12" width="76.9" height="6" rx="1"/><rect class="b-round" x="389.7" y="22" width="64.3" height="6" rx="1"/></svg></td>
+  <td class="num">79.0</td>
+  <td class="fit loss">含む → 外れ</td>
+</tr>
+<tr>
+  <td class="num">129652</td>
+  <td class="coord">36.1570, 138.4900<br><span class="sub">→ 36.1500, 138.4833</span></td>
+  <td class="unit">Cenozoic volcanic rocks<br><span class="sub arrow">Paleozoic-Mesozoic sedimentary rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="195.8" y="2" width="5.1" height="6" rx="1"/><rect class="b-orig" x="389.7" y="12" width="64.3" height="6" rx="1"/><rect class="b-round" x="104.5" y="22" width="285.3" height="6" rx="1"/></svg></td>
+  <td class="num">292.9</td>
+  <td class="fit gain">外れ → 含む</td>
+</tr>
+<tr>
+  <td class="num">129653</td>
+  <td class="coord">36.1570, 138.4900<br><span class="sub">→ 36.1500, 138.4833</span></td>
+  <td class="unit">Cenozoic volcanic rocks<br><span class="sub arrow">Paleozoic-Mesozoic sedimentary rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="195.8" y="2" width="5.1" height="6" rx="1"/><rect class="b-orig" x="389.7" y="12" width="64.3" height="6" rx="1"/><rect class="b-round" x="104.5" y="22" width="285.3" height="6" rx="1"/></svg></td>
+  <td class="num">292.9</td>
+  <td class="fit gain">外れ → 含む</td>
+</tr>
+<tr>
+  <td class="num">129654</td>
+  <td class="coord">36.1570, 138.4900<br><span class="sub">→ 36.1500, 138.4833</span></td>
+  <td class="unit">Cenozoic volcanic rocks<br><span class="sub arrow">Paleozoic-Mesozoic sedimentary rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="195.8" y="2" width="5.1" height="6" rx="1"/><rect class="b-orig" x="389.7" y="12" width="64.3" height="6" rx="1"/><rect class="b-round" x="104.5" y="22" width="285.3" height="6" rx="1"/></svg></td>
+  <td class="num">292.9</td>
+  <td class="fit gain">外れ → 含む</td>
+</tr>
+<tr>
+  <td class="num">129655</td>
+  <td class="coord">36.1570, 138.4900<br><span class="sub">→ 36.1500, 138.4833</span></td>
+  <td class="unit">Cenozoic volcanic rocks<br><span class="sub arrow">Paleozoic-Mesozoic sedimentary rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="195.8" y="2" width="5.1" height="6" rx="1"/><rect class="b-orig" x="389.7" y="12" width="64.3" height="6" rx="1"/><rect class="b-round" x="104.5" y="22" width="285.3" height="6" rx="1"/></svg></td>
+  <td class="num">292.9</td>
+  <td class="fit gain">外れ → 含む</td>
+</tr>
+<tr>
+  <td class="num">129656</td>
+  <td class="coord">36.1570, 138.4900<br><span class="sub">→ 36.1500, 138.4833</span></td>
+  <td class="unit">Cenozoic volcanic rocks<br><span class="sub arrow">Paleozoic-Mesozoic sedimentary rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="195.8" y="2" width="5.1" height="6" rx="1"/><rect class="b-orig" x="389.7" y="12" width="64.3" height="6" rx="1"/><rect class="b-round" x="104.5" y="22" width="285.3" height="6" rx="1"/></svg></td>
+  <td class="num">292.9</td>
+  <td class="fit gain">外れ → 含む</td>
+</tr>
+<tr>
+  <td class="num">142029</td>
+  <td class="coord">35.4125, 136.5700<br><span class="sub">→ 35.4167, 136.5667</span></td>
+  <td class="unit">Mesozoic-Cenozoic volcanic and intrusive rocks<br><span class="sub arrow">Paleozoic-Mesozoic sedimentary and volcanic rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="195.8" y="2" width="5.1" height="6" rx="1"/><rect class="b-orig" x="312.8" y="12" width="118.8" height="6" rx="1"/><rect class="b-round" x="104.5" y="22" width="285.3" height="6" rx="1"/></svg></td>
+  <td class="num">213.9</td>
+  <td class="fit gain">外れ → 含む</td>
+</tr>
+<tr>
+  <td class="num">165294</td>
+  <td class="coord">32.4440, 130.9730<br><span class="sub">→ 32.4500, 130.9667</span></td>
+  <td class="unit">Mesozoic sedimentary rocks<br><span class="sub arrow">Paleozoic sedimentary rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="238.3" y="2" width="5.8" height="6" rx="1"/><rect class="b-orig" x="312.8" y="12" width="76.9" height="6" rx="1"/><rect class="b-round" x="21.8" y="22" width="82.7" height="6" rx="1"/></svg></td>
+  <td class="num">298.8</td>
+  <td class="fit ">外れ → 外れ</td>
+</tr>
+<tr>
+  <td class="num">165702</td>
+  <td class="coord">42.5450, 143.1000<br><span class="sub">→ 42.5500, 143.1000</span></td>
+  <td class="unit">Paleozoic-Mesozoic crystalline metamorphic rocks<br><span class="sub arrow">Cenozoic sedimentary rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="453.9" y="2" width="1.6" height="6" rx="1"/><rect class="b-orig" x="104.5" y="12" width="285.3" height="6" rx="1"/><rect class="b-round" x="431.6" y="22" width="22.4" height="6" rx="1"/></svg></td>
+  <td class="num">335.9</td>
+  <td class="fit gain">外れ → 含む</td>
+</tr>
+<tr>
+  <td class="num">180395</td>
+  <td class="coord">37.1083, 140.8486<br><span class="sub">→ 37.1167, 140.8500</span></td>
+  <td class="unit">Paleozoic sedimentary rocks<br><span class="sub arrow">Mesozoic intrusive rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="417.0" y="2" width="4.0" height="6" rx="1"/><rect class="b-orig" x="-72.9" y="12" width="177.3" height="6" rx="1"/><rect class="b-round" x="208.7" y="22" width="181.1" height="6" rx="1"/></svg></td>
+  <td class="num">289.1</td>
+  <td class="fit ">外れ → 外れ</td>
+</tr>
+<tr>
+  <td class="num">181921</td>
+  <td class="coord">42.1787, 142.7963<br><span class="sub">→ 42.1833, 142.8000</span></td>
+  <td class="unit">Mesozoic sedimentary rocks<br><span class="sub arrow">Paleozoic-Mesozoic crystalline metamorphic rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="372.7" y="2" width="12.6" height="6" rx="1"/><rect class="b-orig" x="312.8" y="12" width="76.9" height="6" rx="1"/><rect class="b-round" x="104.5" y="22" width="285.3" height="6" rx="1"/></svg></td>
+  <td class="num">213.9</td>
+  <td class="fit ">含む → 含む</td>
+</tr>
+<tr>
+  <td class="num">181925</td>
+  <td class="coord">42.1752, 142.8006<br><span class="sub">→ 42.1833, 142.8000</span></td>
+  <td class="unit">Mesozoic sedimentary rocks<br><span class="sub arrow">Paleozoic-Mesozoic crystalline metamorphic rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="372.7" y="2" width="12.6" height="6" rx="1"/><rect class="b-orig" x="312.8" y="12" width="76.9" height="6" rx="1"/><rect class="b-round" x="104.5" y="22" width="285.3" height="6" rx="1"/></svg></td>
+  <td class="num">213.9</td>
+  <td class="fit ">含む → 含む</td>
+</tr>
+<tr>
+  <td class="num">207639</td>
+  <td class="coord">32.6298, 130.7491<br><span class="sub">→ 32.6333, 130.7500</span></td>
+  <td class="unit">Paleozoic sedimentary rocks<br><span class="sub arrow">Cenozoic sedimentary and volcanic rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="431.6" y="2" width="17.2" height="6" rx="1"/><rect class="b-orig" x="21.8" y="12" width="82.7" height="6" rx="1"/><rect class="b-round" x="389.7" y="22" width="64.3" height="6" rx="1"/></svg></td>
+  <td class="num">377.8</td>
+  <td class="fit gain">外れ → 含む</td>
+</tr>
+<tr>
+  <td class="num">211553</td>
+  <td class="coord">43.8433, 142.4589<br><span class="sub">→ 43.8500, 142.4667</span></td>
+  <td class="unit">Mesozoic sedimentary rocks<br><span class="sub arrow">Cenozoic sedimentary rocks</span></td>
+  <td class="trackcell"><svg class="track" viewBox="0 0 460 32" role="img" aria-label="化石年代・元座標ポリゴン年代・丸め後ポリゴン年代の範囲"><line class="grid" x1="454.0" y1="1" x2="454.0" y2="31"/><line class="grid" x1="356.6" y1="1" x2="356.6" y2="31"/><line class="grid" x1="259.2" y1="1" x2="259.2" y2="31"/><line class="grid" x1="161.8" y1="1" x2="161.8" y2="31"/><line class="grid" x1="64.4" y1="1" x2="64.4" y2="31"/><rect class="b-fossil" x="223.2" y="2" width="8.8" height="6" rx="1"/><rect class="b-orig" x="312.8" y="12" width="76.9" height="6" rx="1"/><rect class="b-round" x="431.6" y="22" width="22.4" height="6" rx="1"/></svg></td>
+  <td class="num">122.0</td>
+  <td class="fit ">外れ → 外れ</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="key">
+  <span><i style="background:var(--fossil)"></i>化石の推定年代</span>
+  <span><i style="background:var(--orig)"></i>元座標のポリゴン年代</span>
+  <span><i style="background:var(--round)"></i>丸め後のポリゴン年代</span>
+</div>
+
+<div class="note">
+  <p>15件のうち、化石の推定年代がポリゴンの年代範囲に収まっていたのは、元座標で 3 件、丸め後で 10 件だった。丸めたほうが見かけ上の整合が増えている。</p>
+  <p>これは丸めが有益だという意味ではない。この縮尺の地質図では、ポリゴンの年代区分が広すぎて化石年代との整合を判定する力が足りない、と読むのが妥当である。より細かい地質図で確かめるまで、どちらの向きの結論も出せない。</p>
+</div>
+
+<h2><span class="n">5</span>この監査で言えないこと</h2>
+<ul>
+  <li>元座標が正しいという保証はない。ここで測ったのは正確さではなく、座標処理に対する判定の<strong>感度</strong>である。</li>
+  <li>日本側の観測は15件・11地点にとどまる。比率の信頼区間は 0.24–0.64% と広い。</li>
+  <li>低い変化率の原因が地質図の粗さであるとは、まだ実証していない。有力な仮説の段階にある。</li>
+  <li>ポリゴン年代の差（最大で約 293 Ma）は、化石の推定年代がその分ずれるという意味ではない。</li>
+  <li>本照合は点内判定のみで、Ye &amp; Peters (2023) の年代条件や近傍探索を含む照合方法とは異なる。未マッチ件数を直接比較することはできない。</li>
+  <li>Macrostrat は 2022年以降も更新されている。本ページのスナップショットを現在の Macrostrat と混同してはならない。</li>
+</ul>
+
+<h2><span class="n">6</span>GSJシームレス地質図V2 — 未検証</h2>
+<p class="lede">GSJ側の照合は、入力データと取得コードを用意し、オフラインの検算テストを通した段階にある。APIへの実通信は成功していない。<strong>したがって本ページにGSJの数値はひとつも存在しない。</strong></p>
+
+<div class="scroll">
+<table class="cmp">
+<thead><tr><th>工程</th><th class="v" style="text-align:right">状態</th></tr></thead>
+<tbody>
+  <tr><td>入力：Macrostratで変化した実在コレクション</td><td class="v">15 件 / 11 地点<span class="ci">PBDB collection_no 照合済み</span></td></tr>
+  <tr><td>入力：日本の母集団</td><td class="v">4,766 件 / 2,480 座標<span class="ci">本ページの解析対象と同一集合</span></td></tr>
+  <tr><td>オフライン検算テスト</td><td class="v">6 件すべて通過</td></tr>
+  <tr class="key"><td>GSJ APIへの実通信</td><td class="v">失敗<span class="ci">2026-11-10 00:33:50 UTC</span></td></tr>
+  <tr><td>凡例変更率・年代表記変更率</td><td class="v">未取得</td></tr>
+  <tr><td>地質境界までの距離</td><td class="v">未計算<span class="ci">ベクタ形状が必要</span></td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="note pending">
+  <p><strong>通信の記録。</strong>公式ドキュメントの例（39.700038, 141.149898）に対して期待される凡例記号は <code>K12_pim_a</code>。実際に得られた値は <code>なし</code>。</p>
+  <p>3地点すべてで同じ障害が出ている。記録された内容:</p>
+  <p><code>request_error: URLError: &lt;urlopen error [Errno -2] Name or service not known></code></p>
+  <p>ホスト名が解決できていない。実行環境から当該ドメインへ到達できないことによる失敗であり、GSJ側の応答内容についてはこの記録から何も言えない。生ログは <code>research/gsj/probe/gsj_probe_raw.json</code> にある。</p>
+</div>
+
+<div class="note">
+  <p>取得コードは通信に失敗した点を <code>unknown</code> として記録し、「変化しなかった」とは扱わない。正常な応答以外はキャッシュにも書き込まない。</p>
+  <p>以前に作成された <code>gsj_pilot_11</code>（コレクション番号が <code>p1</code>〜<code>p11</code>、全地点で同一の凡例記号）は実測値として棄却済み。本ページはその値を参照していない。監査記録は <code>research/gsj/rejected_pilot_11_audit.json</code> にある。「GSJでは変化が0件だった」という記述も成り立たない。</p>
+</div>
+
+<h2><span class="n">7</span>GSJの結果を載せるときの条件</h2>
+<p class="lede">取得が成功した場合でも、次の区別を守らないかぎり数値を本ページに載せない。</p>
+<ul>
+  <li>凡例記号（<code>symbol</code>）の変化は、個別ポリゴンの変化ではない。同じ凡例の別ポリゴンへ移っても検出されない。</li>
+  <li>年代表記（<code>formationAge_ja</code>）の変化は文字列の変化であり、化石年代との整合が反転したことを意味しない。</li>
+  <li>上の15件はMacrostratで変化したものだけを選んだ条件付き標本である。その変化率を日本全体の率として書かない。</li>
+  <li>全国の率は4,766件のうち<strong>両方の座標で取得に成功した件数</strong>を分母とし、未取得件数を併記する。</li>
+</ul>
+
+</main>
+
+<footer class="wrap">
+  <p>化石データおよび Macrostrat 地質図は Ye &amp; Peters (2023), <i>Paleobiology</i> 49(3) の Dryad 補遺（doi:10.5061/dryad.vhhmgqnxt）による。Macrostrat は CC BY 4.0 で提供されている。</p>
+  <p>本ページの数値は <code>data/out_JP_arcmin1.0.csv</code> および <code>data/summary_macrostrat.json</code> から生成している。生成手順は <code>scripts/quant_macrostrat.py</code> と <code>build.mjs</code> を参照。</p>
+  <p>学部卒業研究の中間記録。査読を経ていない。</p>
+</footer>
+
+</body>
+</html>

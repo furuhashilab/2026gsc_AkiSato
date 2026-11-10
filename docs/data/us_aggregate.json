@@ -1,0 +1,14 @@
+{
+ "region": "US",
+ "n_polygons": 10233,
+ "median_poly_area_km2": 136.994938139,
+ "mean_poly_area_km2": 1060.5118962483111,
+ "n_collections": 54912,
+ "arcmin1.0_n_both_matched": 52759,
+ "arcmin1.0_poly_change_pct": 3.724483026592619,
+ "arcmin1.0_legend_change_pct": 3.411740177031407,
+ "arcmin1.0_age_change_pct": 3.2638981026933793,
+ "arcmin1.0_lost_match_pct": 0.37696678321678323,
+ "arcmin1.0_age_shift_median_Ma": 97.19999999999999,
+ "arcmin1.0_age_shift_p90_Ma": 507.1
+}

@@ -1,0 +1,6 @@
+node_modules/
+map_data.geojson
+map_data.zip
+fossil_collections.csv
+out_US_arcmin1.0.csv
+*.DS_Store

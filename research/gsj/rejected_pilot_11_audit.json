@@ -1,0 +1,27 @@
+{
+  "filename": "gsj_pilot_15_results.json",
+  "actual_row_count": 11,
+  "id_values": [
+    "p1",
+    "p2",
+    "p3",
+    "p4",
+    "p5",
+    "p6",
+    "p7",
+    "p8",
+    "p9",
+    "p10",
+    "p11"
+  ],
+  "matches_original_coordinate_in_macrostrat_jp4766": 0,
+  "identical_orig_symbols_count": 11,
+  "identical_round_symbols_count": 11,
+  "nearest_jp_collection_distance_km_range": [
+    0.241,
+    25.027
+  ],
+  "status": "REJECTED_AS_MEASUREMENT",
+  "reason": "Not original fossil-collection coordinates, synthetic p1..p11 identifiers, implausibly constant geological legend across distant cities. The origin of the constant symbols is unverified.",
+  "instruction": "Do not display these values or 0/11 as an empirical GSJ change rate; retain only as rejected trial evidence."
+}
